@@ -53,8 +53,9 @@ Key decisions:
 - **The web app is Leptos in CSR (client-side rendering) mode**, built with
   [Trunk](https://trunkrs.dev/) to a fully static bundle. GitHub Pages serves
   it; there is no server runtime.
-- **Routing uses hash routes** (`/#/t/<id>`) so deep links work on GitHub Pages
-  without server-side rewrite rules.
+- **Routing uses path routes served from the domain root** (`https://chinampa.co.cr/<id>`);
+  deep links work on GitHub Pages because the deploy workflow copies
+  `index.html` to `404.html`, which re-serves the SPA for any unmatched path.
 - **iNaturalist images are resolved in the browser** at runtime via the public
   iNat API v1, so the repository never stores binary images.
 
@@ -674,7 +675,7 @@ pub fn App() -> impl IntoView {
     view! {
         <Router>
             <Routes fallback=|| view! { <p>"Not found"</p> }>
-                <Route path=path!("/t/:id") view=TagView/>
+                <Route path=path!("/:id") view=TagView/>
                 <Route path=path!("/") view=Home/>
             </Routes>
         </Router>
@@ -749,23 +750,24 @@ fn main() {
 ```bash
 cargo run -p chnm-cli -- export --out crates/chnm-web/data   # generate data
 cd crates/chnm-web && trunk serve --open
-# open http://localhost:8080/chinampa/  (deep link: /chinampa/t/<id>)
+# open http://localhost:8080/  (deep link: http://localhost:8080/<id>)
 ```
 
 ---
 
 ## 8. NFC tag content
 
-The CLI prints `https://chnm.pa/<id>`. That URL needs to land on the static
-app's hash route. Two options:
+The CLI prints `https://chinampa.co.cr/<id>` (the domain comes from `chnm.toml`,
+falling back to the `DEFAULT_BASE_URL` constant). That URL lands directly on the
+static app's `/:id` route:
 
-1. **Custom domain `chnm.pa`** with a small redirect (or a `404.html` shim) that
-   rewrites `/<id>` → `/#/t/<id>`.
-2. **Write the hash form directly** onto the tag: `https://<owner>.github.io/chinampa/#/t/<id>`.
+- The site is served from the **domain root** via a custom domain, with
+  `public_url = "/"` in `Trunk.toml` and an empty router `base`.
+- GitHub Pages has no server-side rewrites, so the deploy workflow copies
+  `index.html` to **`404.html`**. A scan of `/<id>` 404s into that copy, the
+  WASM bundle boots, and `leptos_router` matches the `/:id` route client-side.
 
-For a server-free setup, option 2 (or a `404.html` redirect trick on Pages) is
-simplest. Document whichever you choose; the `DEFAULT_BASE_URL` constant in the
-CLI controls what gets written.
+No hash fragment and no redirect shim are required.
 
 ---
 
@@ -774,26 +776,25 @@ CLI controls what gets written.
 ### 9.1 What actually gets written to the tag
 
 A Chinampa tag does **not** store the plant's history — it stores a single URL
-(`https://chnm.pa/<id>`). The history lives on the website. So the only thing
-that competes for the tag's bytes is one NDEF URI record.
+(`https://chinampa.co.cr/<id>`). The history lives on the website. So the only
+thing that competes for the tag's bytes is one NDEF URI record.
 
 The **504-byte** capacity corresponds to an **NTAG215** chip (for reference:
 NTAG213 = 144 B, NTAG215 = 504 B, NTAG216 = 888 B — all of them hold the URL
 with room to spare).
 
-Byte budget for `https://chnm.pa/7Gk2pQ8x` encoded as an NDEF URI record:
+Byte budget for `https://chinampa.co.cr/7GK2PQ8X` encoded as an NDEF URI record:
 
 | Part | Bytes |
 |------|-------|
 | NDEF message TLV wrapper + terminator | ~3 |
 | NDEF record header + type length + payload length + type `U` | 4 |
 | URI prefix code `0x04` (`https://`) | 1 |
-| `chnm.pa/7Gk2pQ8x` (16 chars) | 16 |
-| **Total** | **~24** |
+| `chinampa.co.cr/7GK2PQ8X` (23 chars) | 23 |
+| **Total** | **~31** |
 
-Even the long hash form `https://<owner>.github.io/chinampa/#/t/<id>` lands
-around **~45 bytes**. Either way you use **~5–10 %** of an NTAG215; roughly
-**460–480 bytes stay free**.
+Even a longer custom domain URL lands well under **~50 bytes**. Either way you
+use **~5–10 %** of an NTAG215; roughly **460–480 bytes stay free**.
 
 **Conclusion:** the 504-byte capacity is *not* a constraint and does not limit
 how many tags you can manage. The number of manageable tags is determined by

@@ -1,0 +1,14 @@
+# Rust build artifacts
+/target
+**/target
+
+# Trunk / web build output
+crates/chnm-web/dist
+/dist
+
+# Generated tag JSON (produced by `chnm export`)
+crates/chnm-web/data
+
+# Editor / OS
+*.swp
+.DS_Store

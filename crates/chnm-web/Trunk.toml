@@ -1,6 +1,6 @@
 [build]
 target = "index.html"
-# IMPORTANT for GitHub Pages project sites served from /<repo>/:
-# If you publish to a user/organization page (<owner>.github.io) or a custom
-# domain like chnm.pa, set public_url = "/" instead.
-public_url = "/chinampa/"
+# Served from the domain root (custom domain https://chinampa.co.cr/).
+# For a GitHub Pages project site at /<repo>/, set public_url = "/<repo>/" and
+# update BASE / DATA_BASE in src/app.rs to match.
+public_url = "/"

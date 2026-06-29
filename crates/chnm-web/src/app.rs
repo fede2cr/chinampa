@@ -1,11 +1,11 @@
-//! Leptos CSR app: hash-free routing over the GitHub Pages subpath, a home
-//! index, and a per-tag detail view that resolves iNaturalist photos at
-//! runtime.
+//! Leptos CSR app: a home index and a per-tag detail view that resolves
+//! iNaturalist photos at runtime.
 //!
-//! Routing uses path routes under `base="/chinampa"`; deep links work on
-//! GitHub Pages thanks to the `404.html` SPA fallback created by the deploy
-//! workflow. If you host on a user/organization page or a custom domain, set
-//! both `base` here and `public_url` in `Trunk.toml` to `/`.
+//! Routing uses path routes served from the domain root
+//! (https://chinampa.co.cr/); deep links work thanks to the `404.html` SPA
+//! fallback created by the deploy workflow. To host under a subpath instead
+//! (e.g. a GitHub Pages project site at `/chinampa/`), set `BASE`/`DATA_BASE`
+//! below and `public_url` in `Trunk.toml` to that subpath.
 
 use crate::inat::{observation_photos, species_photo, Photo};
 use leptos::prelude::*;
@@ -14,10 +14,12 @@ use leptos_router::hooks::use_params_map;
 use leptos_router::path;
 use serde::Deserialize;
 
-/// Router base path; must match `public_url` in `Trunk.toml`.
-const BASE: &str = "/chinampa";
-/// Where `chnm export` writes the generated JSON (served at `public_url`/data).
-const DATA_BASE: &str = "/chinampa/data";
+/// Router base path. Empty = served from the domain root. For a subpath
+/// deployment set this to e.g. `/chinampa` and `public_url` in `Trunk.toml`
+/// to `/chinampa/`.
+const BASE: &str = "";
+/// Where `chnm export` writes the generated JSON (served at the site root/data).
+const DATA_BASE: &str = "/data";
 
 /// One tag's full detail document (mirrors `chnm-core::Tag` flattened).
 #[derive(Clone, Deserialize)]
@@ -95,7 +97,7 @@ pub fn App() -> impl IntoView {
             <main>
                 <Routes fallback=|| view! { <p>"Not found"</p> }>
                     <Route path=path!("/") view=Home/>
-                    <Route path=path!("/t/:id") view=TagView/>
+                    <Route path=path!("/:id") view=TagView/>
                 </Routes>
             </main>
         </Router>
@@ -121,7 +123,7 @@ fn Home() -> impl IntoView {
                                 let desc = t.description.clone().unwrap_or_default();
                                 view! {
                                     <li>
-                                        <A href=format!("/t/{}", t.id)>{title}</A>
+                                        <A href=format!("/{}", t.id)>{title}</A>
                                         <span class="meta">" "{desc}</span>
                                     </li>
                                 }
