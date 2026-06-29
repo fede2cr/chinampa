@@ -3,12 +3,49 @@
 use anyhow::{bail, Context, Result};
 use chnm_core::{generate_id, is_valid_id, Tag, TagMeta};
 use clap::{Parser, Subcommand};
+use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
 const DEFAULT_BASE_URL: &str = "https://chnm.pa";
+
+/// Minimal on-disk configuration (see `chnm.toml`).
+#[derive(Debug, Default, Deserialize)]
+struct Config {
+    /// Host used to build the NFC tag URL, e.g. "chinampa.co.cr".
+    domain: Option<String>,
+}
+
+/// Load the config file, treating a missing file as empty defaults.
+fn load_config(path: &Path) -> Result<Config> {
+    match fs::read_to_string(path) {
+        Ok(src) => {
+            toml::from_str(&src).with_context(|| format!("parsing {}", path.display()))
+        }
+        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(Config::default()),
+        Err(e) => Err(e).with_context(|| format!("reading {}", path.display())),
+    }
+}
+
+/// Resolve the base URL with precedence: `--base-url` > config `domain` >
+/// built-in default. A bare domain is upgraded to an `https://` URL.
+fn resolve_base_url(cli_base: Option<String>, cfg: &Config) -> String {
+    if let Some(base) = cli_base {
+        return base;
+    }
+    if let Some(domain) = &cfg.domain {
+        let host = domain
+            .trim()
+            .trim_start_matches("https://")
+            .trim_start_matches("http://")
+            .trim_end_matches('/');
+        return format!("https://{host}");
+    }
+    DEFAULT_BASE_URL.to_string()
+}
 
 #[derive(Parser)]
 #[command(name = "chnm", version, about = "Create and manage Chinampa plant tags")]
@@ -17,9 +54,13 @@ struct Cli {
     #[arg(long, default_value = "tags", global = true)]
     tags_dir: PathBuf,
 
-    /// Base URL written onto the NFC tag (the tag ID is appended).
-    #[arg(long, default_value = DEFAULT_BASE_URL, global = true)]
-    base_url: String,
+    /// Configuration file (TOML); missing file falls back to defaults.
+    #[arg(long, default_value = "chnm.toml", global = true)]
+    config: PathBuf,
+
+    /// Base URL written onto the NFC tag (overrides the config `domain`).
+    #[arg(long, global = true)]
+    base_url: Option<String>,
 
     #[command(subcommand)]
     cmd: Command,
@@ -113,6 +154,8 @@ fn write_new(dir: &Path, meta: TagMeta) -> Result<Tag> {
 fn main() -> Result<()> {
     let cli = Cli::parse();
     let dir = &cli.tags_dir;
+    let config = load_config(&cli.config)?;
+    let base_url = resolve_base_url(cli.base_url, &config);
 
     match cli.cmd {
         Command::New {
@@ -129,7 +172,7 @@ fn main() -> Result<()> {
                 observation_inat_id: None,
             };
             let tag = write_new(dir, meta)?;
-            println!("{}", tag.url(&cli.base_url));
+            println!("{}", tag.url(&base_url));
         }
         Command::Clone { id } => {
             if !is_valid_id(&id) {
@@ -147,7 +190,7 @@ fn main() -> Result<()> {
                 observation_inat_id: None,
             };
             let tag = write_new(dir, meta)?;
-            println!("{}", tag.url(&cli.base_url));
+            println!("{}", tag.url(&base_url));
         }
         Command::List => {
             for (id, tag) in load_all(dir)? {
@@ -168,7 +211,7 @@ fn main() -> Result<()> {
             if !is_valid_id(&id) {
                 bail!("invalid id: {id}");
             }
-            println!("{}/{id}", cli.base_url.trim_end_matches('/'));
+            println!("{}/{id}", base_url.trim_end_matches('/'));
         }
         Command::Validate => {
             let all = load_all(dir)?;

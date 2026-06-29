@@ -13,6 +13,7 @@ path = "src/main.rs"
 chnm-core = { path = "../chnm-core" }
 serde = { workspace = true }
 serde_json = { workspace = true }
+toml = "0.8"
 clap = { version = "4", features = ["derive"] }
 anyhow = "1"
 walkdir = "2"
