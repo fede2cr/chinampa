@@ -1,0 +1,6 @@
+[build]
+target = "index.html"
+# IMPORTANT for GitHub Pages project sites served from /<repo>/:
+# If you publish to a user/organization page (<owner>.github.io) or a custom
+# domain like chnm.pa, set public_url = "/" instead.
+public_url = "/chinampa/"
