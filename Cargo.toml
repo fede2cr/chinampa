@@ -3,6 +3,9 @@ resolver = "2"
 members = ["crates/chnm-core", "crates/chnm-cli", "crates/chnm-web"]
 
 [workspace.package]
+# Placeholder; the real version is injected from the git tag at release time
+# (see .github/workflows/release.yml). Do not rely on this value.
+version = "0.0.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/fede2/chinampa"
