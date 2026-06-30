@@ -124,7 +124,3 @@ dl.meta dt {
 dl.meta dd {
   margin: 0;
 }
-
-dl.meta dd.price {
-  margin-left: 0;
-}

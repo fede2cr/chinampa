@@ -289,7 +289,7 @@ fn TagView() -> impl IntoView {
                                     <div><dt>"Collection"</dt><dd>{c}</dd></div>
                                 })}
                                 {price_tag.map(|p| view! {
-                                    <div><dt>"For sale"</dt><dd class="price">{p}</dd></div>
+                                    <div><dt>"For sale"</dt><dd><span class="price">{p}</span></dd></div>
                                 })}
                             </dl>
                             <div class="gallery">
