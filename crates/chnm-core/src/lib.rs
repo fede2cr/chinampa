@@ -19,7 +19,7 @@ const ID_ALPHABET: &str = "23456789ABCDEFGHJKMNPQRSTVWXYZ";
 pub const ID_LEN: usize = 8;
 
 /// The machine-readable frontmatter of a tag.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TagMeta {
     /// Unique 8-char ID (see [`generate_id`]).
     pub id: String,
@@ -40,10 +40,20 @@ pub struct TagMeta {
     /// iNaturalist observation ID (numeric), if one exists for this plant.
     #[serde(default)]
     pub observation_inat_id: Option<u64>,
+    /// Optional collection/grouping this tag belongs to.
+    #[serde(default)]
+    pub collection: Option<String>,
+    /// Whether the plant is currently offered for sale.
+    #[serde(default)]
+    pub for_sale: bool,
+    /// Sale price, expressed in the currency configured in `chnm.toml`
+    /// (`currency`, default `CRC`).
+    #[serde(default)]
+    pub price: Option<f64>,
 }
 
 /// A full tag: frontmatter + the free-form Markdown log body.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Tag {
     #[serde(flatten)]
     pub meta: TagMeta,
@@ -151,6 +161,9 @@ mod tests {
             species_inat_id: None,
             species_name: None,
             observation_inat_id: None,
+            collection: None,
+            for_sale: false,
+            price: None,
         });
         assert_eq!(tag.url("https://chnm.pa/"), "https://chnm.pa/23456789");
         assert_eq!(tag.url("https://chnm.pa"), "https://chnm.pa/23456789");
@@ -166,6 +179,9 @@ mod tests {
                 species_name: Some("Cattleya trianae".into()),
                 species_inat_id: Some(50310),
                 observation_inat_id: None,
+                collection: None,
+                for_sale: false,
+                price: None,
             },
             body: "## Log\n- 2026-01-01 — created\n".into(),
         };

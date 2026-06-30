@@ -93,3 +93,38 @@ article > p {
   border-bottom: 1px solid var(--border);
   padding: 0.6rem 0;
 }
+
+.price {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  background: var(--accent, #2e7d32);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+dl.meta {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.15rem 0.75rem;
+  margin: 0.75rem 0;
+}
+
+dl.meta > div {
+  display: contents;
+}
+
+dl.meta dt {
+  font-weight: 600;
+  color: var(--muted);
+}
+
+dl.meta dd {
+  margin: 0;
+}
+
+dl.meta dd.price {
+  margin-left: 0;
+}

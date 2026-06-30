@@ -6,6 +6,9 @@ description: in-vitro individual transferred to rooting
 species_inat_id: 50310
 species_name: Cattleya trianae
 observation_inat_id: null
+collection: Example-Orquídeas
+for_sale: true
+price: 15000
 ---
 
 ## Description

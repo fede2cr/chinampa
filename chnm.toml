@@ -4,3 +4,6 @@
 # 8-char tag ID is appended (https://<domain>/<id>). Override per-invocation
 # with `--base-url`, or point at a different file with `--config`.
 domain = "chinampa.co.cr"
+
+# Currency code used to display tag prices in the web app (default: CRC).
+currency = "CRC"

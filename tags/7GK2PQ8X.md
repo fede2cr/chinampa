@@ -5,6 +5,9 @@ description: in-vitro multiplication flask (multiple plants)
 species_inat_id: 50310
 species_name: Cattleya trianae
 observation_inat_id: null
+collection: Example-Orquídeas
+for_sale: false
+price: null
 ---
 
 ## Description

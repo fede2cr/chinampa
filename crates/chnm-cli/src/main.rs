@@ -11,12 +11,15 @@ use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
 const DEFAULT_BASE_URL: &str = "https://chnm.pa";
+const DEFAULT_CURRENCY: &str = "CRC";
 
 /// Minimal on-disk configuration (see `chnm.toml`).
 #[derive(Debug, Default, Deserialize)]
 struct Config {
     /// Host used to build the NFC tag URL, e.g. "chinampa.co.cr".
     domain: Option<String>,
+    /// Currency code used to display prices in the web app, e.g. "CRC".
+    currency: Option<String>,
 }
 
 /// Load the config file, treating a missing file as empty defaults.
@@ -45,6 +48,16 @@ fn resolve_base_url(cli_base: Option<String>, cfg: &Config) -> String {
         return format!("https://{host}");
     }
     DEFAULT_BASE_URL.to_string()
+}
+
+/// Resolve the display currency: config `currency` > built-in default (`CRC`).
+fn resolve_currency(cfg: &Config) -> String {
+    cfg.currency
+        .as_deref()
+        .map(str::trim)
+        .filter(|c| !c.is_empty())
+        .unwrap_or(DEFAULT_CURRENCY)
+        .to_string()
 }
 
 #[derive(Parser)]
@@ -79,6 +92,15 @@ enum Command {
         /// Free-form description.
         #[arg(long)]
         description: Option<String>,
+        /// Collection/grouping this tag belongs to.
+        #[arg(long)]
+        collection: Option<String>,
+        /// Mark the plant as offered for sale.
+        #[arg(long)]
+        for_sale: bool,
+        /// Sale price in the configured currency.
+        #[arg(long)]
+        price: Option<f64>,
     },
     /// Create a new tag linked back to an existing parent tag.
     Clone {
@@ -156,12 +178,16 @@ fn main() -> Result<()> {
     let dir = &cli.tags_dir;
     let config = load_config(&cli.config)?;
     let base_url = resolve_base_url(cli.base_url, &config);
+    let currency = resolve_currency(&config);
 
     match cli.cmd {
         Command::New {
             species_name,
             species_inat_id,
             description,
+            collection,
+            for_sale,
+            price,
         } => {
             let meta = TagMeta {
                 id: fresh_id(dir),
@@ -170,6 +196,9 @@ fn main() -> Result<()> {
                 species_name,
                 species_inat_id,
                 observation_inat_id: None,
+                collection,
+                for_sale,
+                price,
             };
             let tag = write_new(dir, meta)?;
             println!("{}", tag.url(&base_url));
@@ -188,6 +217,9 @@ fn main() -> Result<()> {
                 species_name: None,
                 species_inat_id: None,
                 observation_inat_id: None,
+                collection: None,
+                for_sale: false,
+                price: None,
             };
             let tag = write_new(dir, meta)?;
             println!("{}", tag.url(&base_url));
@@ -240,15 +272,23 @@ fn main() -> Result<()> {
                         "id": t.meta.id,
                         "species_name": t.meta.species_name,
                         "description": t.meta.description,
+                        "collection": t.meta.collection,
+                        "for_sale": t.meta.for_sale,
+                        "price": t.meta.price,
+                        "currency": currency,
                     })
                 })
                 .collect();
             fs::write(out.join("index.json"), serde_json::to_vec_pretty(&index)?)?;
-            // One file per tag for detail views.
+            // One file per tag for detail views (currency is site-wide config).
             for tag in all.values() {
+                let mut value = serde_json::to_value(tag)?;
+                if let Some(obj) = value.as_object_mut() {
+                    obj.insert("currency".into(), serde_json::json!(currency));
+                }
                 fs::write(
                     out.join(format!("{}.json", tag.meta.id)),
-                    serde_json::to_vec_pretty(tag)?,
+                    serde_json::to_vec_pretty(&value)?,
                 )?;
             }
             println!("exported {} tags to {}", all.len(), out.display());
