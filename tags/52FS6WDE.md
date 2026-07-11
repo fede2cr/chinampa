@@ -8,6 +8,7 @@ observation_inat_id: 362709273
 collection: Plantas madre - Orquídea
 for_sale: false
 price: null
+count: 1
 ---
 
 ## Description

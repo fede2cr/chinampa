@@ -10,6 +10,8 @@ use std::io;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
+mod inat;
+
 const DEFAULT_BASE_URL: &str = "https://chnm.pa";
 const DEFAULT_CURRENCY: &str = "CRC";
 
@@ -89,6 +91,10 @@ enum Command {
         /// iNaturalist taxon ID for the species.
         #[arg(long)]
         species_inat_id: Option<u64>,
+        /// iNaturalist observation ID. When set, the species name and taxon ID
+        /// are filled in from iNaturalist (unless overridden by the flags above).
+        #[arg(long)]
+        observation_inat_id: Option<u64>,
         /// Free-form description.
         #[arg(long)]
         description: Option<String>,
@@ -101,6 +107,9 @@ enum Command {
         /// Sale price in the configured currency.
         #[arg(long)]
         price: Option<f64>,
+        /// Number of individual plants represented by this tag.
+        #[arg(long)]
+        count: Option<u32>,
     },
     /// Create a new tag linked back to an existing parent tag.
     Clone {
@@ -182,23 +191,31 @@ fn main() -> Result<()> {
 
     match cli.cmd {
         Command::New {
-            species_name,
-            species_inat_id,
+            mut species_name,
+            mut species_inat_id,
+            observation_inat_id,
             description,
             collection,
             for_sale,
             price,
+            count,
         } => {
+            if let Some(obs_id) = observation_inat_id {
+                let resolved = inat::observation_species(obs_id)?;
+                species_inat_id.get_or_insert(resolved.species_inat_id);
+                species_name.get_or_insert(resolved.species_name);
+            }
             let meta = TagMeta {
                 id: fresh_id(dir),
                 linked_tags: vec![],
                 description,
                 species_name,
                 species_inat_id,
-                observation_inat_id: None,
+                observation_inat_id,
                 collection,
                 for_sale,
                 price,
+                count,
             };
             let tag = write_new(dir, meta)?;
             println!("{}", tag.url(&base_url));
@@ -220,6 +237,7 @@ fn main() -> Result<()> {
                 collection: None,
                 for_sale: false,
                 price: None,
+                count: None,
             };
             let tag = write_new(dir, meta)?;
             println!("{}", tag.url(&base_url));
@@ -275,6 +293,7 @@ fn main() -> Result<()> {
                         "collection": t.meta.collection,
                         "for_sale": t.meta.for_sale,
                         "price": t.meta.price,
+                        "count": t.meta.count,
                         "currency": currency,
                     })
                 })
@@ -285,6 +304,7 @@ fn main() -> Result<()> {
                 let mut value = serde_json::to_value(tag)?;
                 if let Some(obj) = value.as_object_mut() {
                     obj.insert("currency".into(), serde_json::json!(currency));
+                    obj.insert("url".into(), serde_json::json!(tag.url(&base_url)));
                 }
                 fs::write(
                     out.join(format!("{}.json", tag.meta.id)),

@@ -8,6 +8,7 @@ observation_inat_id: null
 collection: Cafetos F1
 for_sale: false
 price: null
+count: 10
 ---
 
 ## Description

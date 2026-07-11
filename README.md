@@ -43,12 +43,42 @@ These are fields inside of the markdown
 
 See [Development.md](Development.md) for the full build guide (project layout, code, and CI recipes).
 
-## Suggestions / open questions
+## Usage
 
-A few points worth deciding before/while implementing:
+### Create a new tag
 
-- **Tag file format:** the skeleton fields are stored as YAML frontmatter (machine-readable) plus a Markdown body (the human-edited Log). This keeps third-party editors working while making fields trivial to parse.
-- **Species & observation linking:** store the numeric iNaturalist taxon ID and observation ID, not just URLs, so the web app can call the iNat API directly.
-- **NFC URL vs. static hosting:** GitHub Pages can't rewrite `/<id>` server-side, so the app is served from a custom domain (`chinampa.co.cr`) at the root and the deploy workflow copies `index.html` to `404.html`. A scan of `/<id>` 404s into that copy and `leptos_router` matches the `/:id` route client-side — no hash fragment or redirect shim needed.
-- **ID scheme:** prefer a standard over a bespoke format. The tag stores only a short URL, so the NFC chip's capacity (e.g. 504 bytes on an NTAG215) is never the limit — the namespace is. An 8-char `[a-zA-Z0-9]` ID gives 62⁸ ≈ 2.18×10¹⁴ combinations, far beyond any nursery's needs. Recommended: **NanoID** (a de-facto standard for short, URL-safe IDs) with an unambiguous Crockford-style alphabet, or **ULID** if you want a formal spec with time-sortable IDs. See [Development.md](Development.md#9-nfc-tag-capacity--id-scheme-analysis) for the full capacity and collision analysis. The CLI still checks for an existing file before writing.
-- **Clone semantics:** confirm whether a clone is an exact duplicate of the source URL/ID (as some NFC cloning apps do) or a brand-new ID that references the parent via `linked_tags`. The CLI currently assumes the latter.
+The `chnm new` command generates a fresh 8-char ID, writes a skeleton Markdown
+file into the tags directory, and prints the NFC URL to write onto the chip:
+
+```sh
+chnm new \
+  --species-name "Cattleya skinneri" \
+  --species-inat-id 123456 \
+  --description "In-vitro flask, multiplication stage" \
+  --collection "Orquídeas" \
+  --for-sale \
+  --price 15000
+```
+
+All flags are optional — `chnm new` on its own creates an empty skeleton you
+can flesh out later in any Markdown editor:
+
+```sh
+chnm new
+```
+
+The command prints the URL (e.g. `https://chinampa.co.cr/4MNP9RST`) that you
+then write to the NFC tag.
+
+Useful options:
+
+- `--tags-dir <DIR>` — directory holding the tag files (default `tags`).
+- `--config <FILE>` — config file (default `chnm.toml`); sets the `domain` and `currency`.
+- `--base-url <URL>` — override the base URL written onto the tag.
+
+To create a tag that links back to an existing parent (e.g. a plant moved from
+an in-vitro flask into its own pot), use `clone`:
+
+```sh
+chnm clone 7GK2PQ8X
+```

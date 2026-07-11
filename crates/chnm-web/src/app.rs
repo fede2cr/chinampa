@@ -42,6 +42,10 @@ struct Tag {
     price: Option<f64>,
     #[serde(default)]
     currency: Option<String>,
+    #[serde(default)]
+    count: Option<u32>,
+    #[serde(default)]
+    url: Option<String>,
     body: String,
 }
 
@@ -133,6 +137,27 @@ fn format_price(price: f64, currency: &str) -> String {
         Some(sym) => format!("{sym}{amount}"),
         None => format!("{amount} {currency}"),
     }
+}
+
+/// Strip the URL scheme (`https://`/`http://`) so the QR encodes a bare
+/// `host/id` string, e.g. `chinampa.co.cr/4MNP9RST`.
+fn strip_scheme(url: &str) -> &str {
+    url.trim_start_matches("https://")
+        .trim_start_matches("http://")
+}
+
+/// Render `data` as an inline SVG QR code, or `None` if encoding fails.
+fn qr_svg(data: &str) -> Option<String> {
+    use qrcode::render::svg;
+    use qrcode::QrCode;
+
+    let code = QrCode::new(data.as_bytes()).ok()?;
+    Some(
+        code.render::<svg::Color>()
+            .min_dimensions(160, 160)
+            .quiet_zone(true)
+            .build(),
+    )
 }
 
 /// Render the human-edited Markdown log body to HTML, turning any bare
@@ -275,6 +300,11 @@ fn TagView() -> impl IntoView {
                     let price_tag = (t.for_sale && t.price.is_some())
                         .then(|| format_price(t.price.unwrap(), &currency));
                     let collection = t.collection.clone();
+                    let count = t.count;
+                    let qr = t.url.clone().map(|u| {
+                        let display = strip_scheme(&u).to_string();
+                        (qr_svg(&display), display)
+                    });
                     let known: HashSet<String> = index
                         .get()
                         .map(|s| s.take().into_iter().map(|e| e.id).collect())
@@ -288,10 +318,21 @@ fn TagView() -> impl IntoView {
                                 {collection.map(|c| view! {
                                     <div><dt>"Collection"</dt><dd>{c}</dd></div>
                                 })}
+                                {count.map(|c| view! {
+                                    <div><dt>"Count"</dt><dd>{c}</dd></div>
+                                })}
                                 {price_tag.map(|p| view! {
                                     <div><dt>"For sale"</dt><dd><span class="price">{p}</span></dd></div>
                                 })}
                             </dl>
+                            {qr.map(|(svg, text)| view! {
+                                <div class="qr">
+                                    {svg.map(|s| view! {
+                                        <div class="qr-code" inner_html=s></div>
+                                    })}
+                                    <span class="qr-url">{text}</span>
+                                </div>
+                            })}
                             <div class="gallery">
                                 {move || photos.get().map(|ps| ps.take().into_iter().map(|p| view! {
                                     <figure>

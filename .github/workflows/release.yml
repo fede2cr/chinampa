@@ -34,10 +34,10 @@ jobs:
           - target: aarch64-pc-windows-msvc
             os: windows-latest
           - target: aarch64-apple-darwin
-            os: macos-latest
+            os: macos-26
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Derive version from tag
         shell: bash
@@ -86,7 +86,7 @@ jobs:
           echo "archive=$archive" >> "$GITHUB_OUTPUT"
 
       - name: Upload to GitHub release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: ${{ steps.package.outputs.archive }}
           fail_on_unmatched_files: true

@@ -9,6 +9,7 @@ observation_inat_id: null
 collection: Example-Orquídeas
 for_sale: true
 price: 15000
+count: 12
 ---
 
 ## Description

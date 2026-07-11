@@ -50,6 +50,10 @@ pub struct TagMeta {
     /// (`currency`, default `CRC`).
     #[serde(default)]
     pub price: Option<f64>,
+    /// Number of individual plants represented by this tag (e.g. a multi-plant
+    /// flask or container). Absent means unspecified.
+    #[serde(default)]
+    pub count: Option<u32>,
 }
 
 /// A full tag: frontmatter + the free-form Markdown log body.
@@ -164,6 +168,7 @@ mod tests {
             collection: None,
             for_sale: false,
             price: None,
+            count: None,
         });
         assert_eq!(tag.url("https://chnm.pa/"), "https://chnm.pa/23456789");
         assert_eq!(tag.url("https://chnm.pa"), "https://chnm.pa/23456789");
@@ -182,6 +187,7 @@ mod tests {
                 collection: None,
                 for_sale: false,
                 price: None,
+                count: None,
             },
             body: "## Log\n- 2026-01-01 — created\n".into(),
         };

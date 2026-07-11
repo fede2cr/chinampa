@@ -8,6 +8,7 @@ observation_inat_id: null
 collection: Plantas frutales
 for_sale: false
 price: null
+count: 4
 ---
 
 ## Description
