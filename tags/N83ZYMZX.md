@@ -8,6 +8,7 @@ observation_inat_id: 302447734
 collection: Orquídeas extranjeras
 for_sale: false
 price: null
+count: 1
 ---
 
 ## Description
