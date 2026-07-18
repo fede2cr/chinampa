@@ -13,7 +13,7 @@ count: 5
 
 ## Description
 
-Tallos florales en división constante.
+Tallos con raíces aéreas, en división constante.
 
 Sustrato de 1/2 orquídea joven, y 1/2 tierra de composta con madera molida.
 
