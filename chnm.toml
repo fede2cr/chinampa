@@ -7,3 +7,11 @@ domain = "chinampa.co.cr"
 
 # Currency code used to display tag prices in the web app (default: CRC).
 currency = "CRC"
+
+# GitHub repository that holds the tag Markdown files (the source of truth).
+# The mobile app reads this section to seed its settings; the CLI ignores it.
+[github]
+owner = "fede2"
+repo = "chinampa"
+branch = "main"
+tags_path = "tags"

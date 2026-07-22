@@ -1,0 +1,13 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default capability set for the Chinampa app.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "nfc:allow-is-available",
+    "nfc:allow-scan",
+    "nfc:allow-write",
+    "store:default"
+  ]
+}

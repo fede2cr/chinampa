@@ -1,0 +1,128 @@
+name: android
+
+# Build the Tauri 2 Android app into an APK. If Android signing secrets are
+# present the APK is zipaligned + signed for release; otherwise the unsigned
+# release APK is uploaded so the build is still verifiable.
+#
+# Optional repository secrets for signing:
+#   ANDROID_KEYSTORE_BASE64   base64 of your keystore (.jks) file
+#   ANDROID_KEYSTORE_PASSWORD keystore (store) password
+#   ANDROID_KEY_ALIAS         key alias inside the keystore
+#   ANDROID_KEY_PASSWORD      key password (often same as store password)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "crates/chnm-app/**"
+      - ".github/workflows/android.yml"
+  pull_request:
+    paths:
+      - "crates/chnm-app/**"
+      - ".github/workflows/android.yml"
+  workflow_dispatch:
+
+env:
+  NDK_VERSION: "26.1.10909125"
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: crates/chnm-app
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        run: sdkmanager "ndk;${NDK_VERSION}"
+
+      - name: Export NDK_HOME
+        run: echo "NDK_HOME=$ANDROID_HOME/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
+
+      - name: Install Rust (with Android targets)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/chnm-app/src-tauri
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2.0.0" --locked
+
+      - name: Generate app icons
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+          convert -size 1024x1024 xc:'#2e7d32' \
+            -gravity center -fill white -pointsize 520 -annotate 0 'C' \
+            app-icon.png
+          cargo tauri icon app-icon.png
+
+      - name: Initialize Android project
+        run: cargo tauri android init
+
+      - name: Build APK
+        run: cargo tauri android build --apk
+
+      - name: Sign APK if a keystore is configured
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          apk=$(find src-tauri/gen/android -path '*apk*release*' -name '*.apk' | head -1)
+          if [ -z "$apk" ]; then
+            echo "No release APK produced by the build." >&2
+            exit 1
+          fi
+          echo "Built APK: $apk"
+
+          if [ -z "${KEYSTORE_B64:-}" ]; then
+            echo "No ANDROID_KEYSTORE_BASE64 secret set — uploading the unsigned APK."
+            cp "$apk" "$RUNNER_TEMP/chnm-android-unsigned.apk"
+            echo "APK_OUT=$RUNNER_TEMP/chnm-android-unsigned.apk" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          echo "Keystore secret found — signing the release APK."
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/keystore.jks"
+          build_tools=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$build_tools/zipalign" -f -v 4 "$apk" "$RUNNER_TEMP/aligned.apk"
+          "$build_tools/apksigner" sign \
+            --ks "$RUNNER_TEMP/keystore.jks" \
+            --ks-pass "pass:${KEYSTORE_PASSWORD}" \
+            --ks-key-alias "${KEY_ALIAS}" \
+            --key-pass "pass:${KEY_PASSWORD}" \
+            --out "$RUNNER_TEMP/chnm-android-signed.apk" \
+            "$RUNNER_TEMP/aligned.apk"
+          "$build_tools/apksigner" verify --verbose "$RUNNER_TEMP/chnm-android-signed.apk"
+          echo "APK_OUT=$RUNNER_TEMP/chnm-android-signed.apk" >> "$GITHUB_ENV"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chnm-android-apk
+          path: ${{ env.APK_OUT }}
+          if-no-files-found: error

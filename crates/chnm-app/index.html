@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>Chinampa</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <main id="app">
+      <header class="app-header">
+        <h1>Chinampa</h1>
+        <button id="reload" class="ghost" type="button">Reload</button>
+      </header>
+
+      <details class="panel" id="settings-panel">
+        <summary>Repository settings</summary>
+        <div class="settings">
+          <div class="field">
+            <label for="owner">Owner</label>
+            <input id="owner" type="text" autocapitalize="none" spellcheck="false" />
+          </div>
+          <div class="field">
+            <label for="repo">Repo</label>
+            <input id="repo" type="text" autocapitalize="none" spellcheck="false" />
+          </div>
+          <div class="field">
+            <label for="branch">Branch</label>
+            <input id="branch" type="text" autocapitalize="none" spellcheck="false" />
+          </div>
+          <div class="field">
+            <label for="domain">Domain</label>
+            <input id="domain" type="text" autocapitalize="none" spellcheck="false" />
+          </div>
+          <div class="field field-wide">
+            <label for="token">GitHub token (needed to create tags)</label>
+            <input id="token" type="password" autocapitalize="none" spellcheck="false" />
+          </div>
+        </div>
+        <button id="load-config" class="ghost" type="button">
+          Load from chnm.toml
+        </button>
+      </details>
+
+      <details class="panel" id="create-panel">
+        <summary>Create a tag</summary>
+        <div class="settings">
+          <div class="field field-wide">
+            <label for="new-species">Species name</label>
+            <input id="new-species" type="text" autocapitalize="none" spellcheck="false" />
+          </div>
+          <div class="field">
+            <label for="new-species-inat">Species iNat ID</label>
+            <input id="new-species-inat" type="number" inputmode="numeric" min="0" />
+          </div>
+          <div class="field">
+            <label for="new-collection">Collection</label>
+            <input id="new-collection" type="text" autocapitalize="none" spellcheck="false" />
+          </div>
+          <div class="field field-wide">
+            <label for="new-observation">Observation iNat ID (fills species)</label>
+            <div class="field-inline">
+              <input id="new-observation" type="number" inputmode="numeric" min="0" />
+              <button id="lookup" class="ghost" type="button">Look up</button>
+            </div>
+          </div>
+          <div class="field field-wide">
+            <label for="new-description">Description</label>
+            <input id="new-description" type="text" />
+          </div>
+          <div class="field">
+            <label for="new-count">Count</label>
+            <input id="new-count" type="number" inputmode="numeric" min="1" />
+          </div>
+          <div class="field">
+            <label for="new-price">Price</label>
+            <input id="new-price" type="number" inputmode="decimal" min="0" step="any" />
+          </div>
+          <div class="field field-check">
+            <label><input id="new-for-sale" type="checkbox" /> For sale</label>
+          </div>
+          <div class="field field-check">
+            <label><input id="new-write-nfc" type="checkbox" checked /> Write NFC after create</label>
+          </div>
+        </div>
+        <button id="create" type="button">Create tag</button>
+      </details>
+
+      <section id="editor" class="editor hidden">
+        <div class="editor-head">
+          <h2>Edit <span id="edit-id" class="tag-id"></span></h2>
+          <button id="edit-cancel" class="ghost" type="button">Cancel</button>
+        </div>
+        <div class="settings">
+          <div class="field field-wide">
+            <label for="edit-species">Species name</label>
+            <input id="edit-species" type="text" autocapitalize="none" spellcheck="false" />
+          </div>
+          <div class="field">
+            <label for="edit-species-inat">Species iNat ID</label>
+            <input id="edit-species-inat" type="number" inputmode="numeric" min="0" />
+          </div>
+          <div class="field">
+            <label for="edit-observation">Observation iNat ID</label>
+            <input id="edit-observation" type="number" inputmode="numeric" min="0" />
+          </div>
+          <div class="field">
+            <label for="edit-collection">Collection</label>
+            <input id="edit-collection" type="text" autocapitalize="none" spellcheck="false" />
+          </div>
+          <div class="field">
+            <label for="edit-count">Count</label>
+            <input id="edit-count" type="number" inputmode="numeric" min="1" />
+          </div>
+          <div class="field">
+            <label for="edit-price">Price</label>
+            <input id="edit-price" type="number" inputmode="decimal" min="0" step="any" />
+          </div>
+          <div class="field field-check">
+            <label><input id="edit-for-sale" type="checkbox" /> For sale</label>
+          </div>
+          <div class="field field-wide">
+            <label for="edit-description">Description</label>
+            <input id="edit-description" type="text" />
+          </div>
+          <div class="field field-wide">
+            <label for="edit-linked">Linked tags (comma-separated)</label>
+            <input id="edit-linked" type="text" autocapitalize="none" spellcheck="false" />
+          </div>
+          <div class="field field-wide">
+            <label for="edit-body">Body (Markdown)</label>
+            <textarea id="edit-body" rows="10"></textarea>
+          </div>
+        </div>
+        <button id="edit-save" type="button">Save changes</button>
+      </section>
+
+      <p id="status" class="status" role="status"></p>
+      <ul id="tags" class="tags"></ul>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

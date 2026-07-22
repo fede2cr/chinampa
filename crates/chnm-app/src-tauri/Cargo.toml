@@ -1,0 +1,31 @@
+[package]
+name = "chnm-app"
+version = "0.1.0"
+edition = "2021"
+description = "Chinampa mobile app (Tauri 2)"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/fede2/chinampa"
+
+# Detach from the root Cargo workspace: the Tauri app builds independently and
+# keeps its own Cargo.lock, while still consuming chnm-core via a path dep.
+[workspace]
+
+# The `_lib` name avoids clashing with the binary on Windows and is what the
+# mobile entry point links against.
+[lib]
+name = "chnm_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-nfc = "2"
+tauri-plugin-store = "2"
+chnm-core = { path = "../../chnm-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+base64 = "0.22"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+toml = "0.8"
