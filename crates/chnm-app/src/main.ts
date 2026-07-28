@@ -61,9 +61,18 @@ interface TagDetail {
   forSale: boolean;
   price: number | null;
   count: number | null;
+  bookReferences: BookReference[];
   body: string;
   sha: string;
   url: string;
+}
+
+/** A bibliographic reference (book) cited by a tag. */
+interface BookReference {
+  book: string;
+  authors: string[];
+  isbn: string | null;
+  page: number | null;
 }
 
 /** Editable fields sent to the Rust `update_tag` command. */
@@ -77,6 +86,7 @@ interface TagEdit {
   forSale: boolean;
   price?: number;
   count?: number;
+  bookReferences: BookReference[];
   body: string;
 }
 
@@ -208,6 +218,44 @@ function parseLinked(value: string): string[] {
     .filter((s) => s.length > 0);
 }
 
+/**
+ * Serialize book references to one line per entry for the editor textarea:
+ * `Book title | Author 1, Author 2 | ISBN | Page`.
+ */
+function formatReferences(refs: BookReference[]): string {
+  return refs
+    .map((r) =>
+      [r.book, r.authors.join(", "), r.isbn ?? "", r.page ?? ""]
+        .map((s) => String(s).trim())
+        .join(" | "),
+    )
+    .join("\n");
+}
+
+/** Parse the editor textarea back into structured book references. */
+function parseReferences(value: string): BookReference[] {
+  return value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => {
+      const [book = "", authors = "", isbn = "", page = ""] = line
+        .split("|")
+        .map((s) => s.trim());
+      const pageNum = Number(page);
+      return {
+        book,
+        authors: authors
+          .split(",")
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0),
+        isbn: isbn === "" ? null : isbn,
+        page: page !== "" && Number.isFinite(pageNum) ? pageNum : null,
+      };
+    })
+    .filter((r) => r.book.length > 0);
+}
+
 /** Write a tag's URL to a physical NFC chip as an NDEF URI record. */
 async function writeTag(tag: TagSummary): Promise<void> {
   if (!(await isAvailable())) {
@@ -244,6 +292,9 @@ async function openEditor(tag: TagSummary): Promise<void> {
     $<HTMLInputElement>("edit-for-sale").checked = detail.forSale;
     setTextInput("edit-description", detail.description);
     $<HTMLInputElement>("edit-linked").value = detail.linkedTags.join(", ");
+    $<HTMLTextAreaElement>("edit-references").value = formatReferences(
+      detail.bookReferences,
+    );
     $<HTMLTextAreaElement>("edit-body").value = detail.body;
     $("editor").classList.remove("hidden");
     $("editor").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -273,6 +324,9 @@ function fillEditor(detail: TagDetail): void {
   $<HTMLInputElement>("edit-for-sale").checked = detail.forSale;
   setTextInput("edit-description", detail.description);
   $<HTMLInputElement>("edit-linked").value = detail.linkedTags.join(", ");
+  $<HTMLTextAreaElement>("edit-references").value = formatReferences(
+    detail.bookReferences,
+  );
   $<HTMLTextAreaElement>("edit-body").value = detail.body;
 }
 
@@ -293,6 +347,9 @@ async function saveEdit(): Promise<void> {
     forSale: $<HTMLInputElement>("edit-for-sale").checked,
     price: numberValue("edit-price"),
     count: numberValue("edit-count"),
+    bookReferences: parseReferences(
+      $<HTMLTextAreaElement>("edit-references").value,
+    ),
     body: $<HTMLTextAreaElement>("edit-body").value,
   };
   setStatus(`Saving ${editingId}…`, "info");

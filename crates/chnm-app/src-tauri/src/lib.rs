@@ -14,7 +14,7 @@
 use std::collections::HashSet;
 
 use base64::{engine::general_purpose::STANDARD, Engine as _};
-use chnm_core::{generate_id, is_valid_id, Tag, TagMeta};
+use chnm_core::{generate_id, is_valid_id, BookReference, Tag, TagMeta};
 use serde::{Deserialize, Serialize};
 
 /// Repository + display settings supplied by the frontend.
@@ -66,6 +66,9 @@ pub struct NewTagInput {
     pub price: Option<f64>,
     #[serde(default)]
     pub count: Option<u32>,
+    /// Book references cited by this tag (book name, authors, ISBN, page).
+    #[serde(default)]
+    pub book_references: Vec<BookReference>,
     /// Parent tag IDs to link back to (used by `clone_tag`).
     #[serde(default)]
     pub linked_tags: Vec<String>,
@@ -98,6 +101,7 @@ pub struct TagDetail {
     pub for_sale: bool,
     pub price: Option<f64>,
     pub count: Option<u32>,
+    pub book_references: Vec<BookReference>,
     pub body: String,
     pub sha: String,
     pub url: String,
@@ -125,6 +129,8 @@ pub struct TagEdit {
     pub price: Option<f64>,
     #[serde(default)]
     pub count: Option<u32>,
+    #[serde(default)]
+    pub book_references: Vec<BookReference>,
     pub body: String,
 }
 
@@ -315,6 +321,7 @@ async fn create_and_commit(
         for_sale: input.for_sale,
         price: input.price,
         count: input.count,
+        book_references: input.book_references,
     };
     let tag = Tag::new(meta);
     let markdown = tag.to_markdown().map_err(|e| e.to_string())?;
@@ -500,6 +507,7 @@ async fn fetch_tag_detail(
         for_sale: tag.meta.for_sale,
         price: tag.meta.price,
         count: tag.meta.count,
+        book_references: tag.meta.book_references,
         body: tag.body,
         sha: file.sha,
         url,
@@ -552,6 +560,7 @@ async fn update_tag(
         for_sale: edit.for_sale,
         price: edit.price,
         count: edit.count,
+        book_references: edit.book_references,
     };
     let tag = Tag {
         meta,

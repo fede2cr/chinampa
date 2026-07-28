@@ -18,6 +18,22 @@ const ID_ALPHABET: &str = "23456789ABCDEFGHJKMNPQRSTVWXYZ";
 /// Length of a generated tag ID.
 pub const ID_LEN: usize = 8;
 
+/// A bibliographic reference (book) cited by a tag.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BookReference {
+    /// Book title.
+    pub book: String,
+    /// Author(s) of the book.
+    #[serde(default)]
+    pub authors: Vec<String>,
+    /// ISBN (ISBN-10 or ISBN-13), if known.
+    #[serde(default)]
+    pub isbn: Option<String>,
+    /// Page number the reference points to.
+    #[serde(default)]
+    pub page: Option<u32>,
+}
+
 /// The machine-readable frontmatter of a tag.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TagMeta {
@@ -54,6 +70,9 @@ pub struct TagMeta {
     /// flask or container). Absent means unspecified.
     #[serde(default)]
     pub count: Option<u32>,
+    /// Book references cited by this tag (book name, authors, ISBN, page).
+    #[serde(default)]
+    pub book_references: Vec<BookReference>,
 }
 
 /// A full tag: frontmatter + the free-form Markdown log body.
@@ -169,6 +188,7 @@ mod tests {
             for_sale: false,
             price: None,
             count: None,
+            book_references: vec![],
         });
         assert_eq!(tag.url("https://chnm.pa/"), "https://chnm.pa/23456789");
         assert_eq!(tag.url("https://chnm.pa"), "https://chnm.pa/23456789");
@@ -188,6 +208,12 @@ mod tests {
                 for_sale: false,
                 price: None,
                 count: None,
+                book_references: vec![BookReference {
+                    book: "The Orchids: Natural History and Classification".into(),
+                    authors: vec!["Robert L. Dressler".into()],
+                    isbn: Some("978-0674875265".into()),
+                    page: Some(212),
+                }],
             },
             body: "## Log\n- 2026-01-01 — created\n".into(),
         };
@@ -195,6 +221,7 @@ mod tests {
         let back = Tag::from_markdown(&md).unwrap();
         assert_eq!(back, tag);
         assert_eq!(back.meta.species_inat_id, Some(50310));
+        assert_eq!(back.meta.book_references.len(), 1);
     }
 
     #[test]

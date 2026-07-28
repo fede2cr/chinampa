@@ -25,8 +25,7 @@ const DATA_BASE: &str = "/data";
 /// One tag's full detail document (mirrors `chnm-core::Tag` flattened).
 #[derive(Clone, Deserialize)]
 struct Tag {
-    id: String,
-    #[serde(default)]
+    id: String,    #[serde(default)]
     species_name: Option<String>,
     #[serde(default)]
     species_inat_id: Option<u64>,
@@ -45,8 +44,22 @@ struct Tag {
     #[serde(default)]
     count: Option<u32>,
     #[serde(default)]
+    book_references: Vec<BookReference>,
+    #[serde(default)]
     url: Option<String>,
     body: String,
+}
+
+/// A bibliographic reference (book) cited by a tag.
+#[derive(Clone, Deserialize)]
+struct BookReference {
+    book: String,
+    #[serde(default)]
+    authors: Vec<String>,
+    #[serde(default)]
+    isbn: Option<String>,
+    #[serde(default)]
+    page: Option<u32>,
 }
 
 /// A lightweight index entry used by the home list view.
@@ -241,7 +254,15 @@ fn Home() -> impl IntoView {
         <p>"Scan a tag to view a plant's history, or pick one below."</p>
         <Suspense fallback=|| view! { <p>"Loading…"</p> }>
             {move || index.get().map(|entries| {
-                let entries = entries.take();
+                let mut entries = entries.take();
+                // Sort by scientific (species) name, falling back to the id when
+                // absent, case-insensitively.
+                entries.sort_by_key(|t| {
+                    t.species_name
+                        .clone()
+                        .unwrap_or_else(|| t.id.clone())
+                        .to_lowercase()
+                });
                 if entries.is_empty() {
                     view! { <p>"No tags yet."</p> }.into_any()
                 } else {
@@ -301,6 +322,7 @@ fn TagView() -> impl IntoView {
                         .then(|| format_price(t.price.unwrap(), &currency));
                     let collection = t.collection.clone();
                     let count = t.count;
+                    let references = t.book_references.clone();
                     let qr = t.url.clone().map(|u| {
                         let display = strip_scheme(&u).to_string();
                         (qr_svg(&display), display)
@@ -325,6 +347,27 @@ fn TagView() -> impl IntoView {
                                     <div><dt>"For sale"</dt><dd><span class="price">{p}</span></dd></div>
                                 })}
                             </dl>
+                            {(!references.is_empty()).then(|| view! {
+                                <section class="references">
+                                    <h2>"References"</h2>
+                                    <ul>
+                                        {references.into_iter().map(|r| {
+                                            let mut parts: Vec<String> = Vec::new();
+                                            if !r.authors.is_empty() {
+                                                parts.push(r.authors.join(", "));
+                                            }
+                                            parts.push(r.book);
+                                            if let Some(isbn) = r.isbn {
+                                                parts.push(format!("ISBN {isbn}"));
+                                            }
+                                            if let Some(page) = r.page {
+                                                parts.push(format!("p. {page}"));
+                                            }
+                                            view! { <li>{parts.join(" — ")}</li> }
+                                        }).collect_view()}
+                                    </ul>
+                                </section>
+                            })}
                             {qr.map(|(svg, text)| view! {
                                 <div class="qr">
                                     {svg.map(|s| view! {
@@ -336,7 +379,9 @@ fn TagView() -> impl IntoView {
                             <div class="gallery">
                                 {move || photos.get().map(|ps| ps.take().into_iter().map(|p| view! {
                                     <figure>
-                                        <img src=p.url alt="iNaturalist photo"/>
+                                        <a href=p.link target="_blank" rel="noopener noreferrer">
+                                            <img src=p.url alt="iNaturalist photo"/>
+                                        </a>
                                         <figcaption inner_html=p.attribution></figcaption>
                                     </figure>
                                 }).collect_view())}

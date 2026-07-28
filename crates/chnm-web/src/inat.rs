@@ -14,6 +14,8 @@ pub struct Photo {
     pub url: String,
     /// Attribution string required by iNaturalist's terms.
     pub attribution: String,
+    /// Link to the iNaturalist page this photo came from (observation or taxon).
+    pub link: String,
 }
 
 #[derive(Deserialize)]
@@ -55,6 +57,7 @@ fn to_medium(url: &str) -> String {
 /// Fetch all photos for an observation. Returns an empty list on any error.
 pub async fn observation_photos(id: u64) -> Vec<Photo> {
     let url = format!("{API}/observations/{id}");
+    let link = format!("https://www.inaturalist.org/observations/{id}");
     match gloo_net::http::Request::get(&url).send().await {
         Ok(resp) => match resp.json::<Wrapper<ObsResult>>().await {
             Ok(w) => w
@@ -64,6 +67,7 @@ pub async fn observation_photos(id: u64) -> Vec<Photo> {
                 .map(|p| Photo {
                     url: to_medium(&p.url),
                     attribution: p.attribution,
+                    link: link.clone(),
                 })
                 .collect(),
             Err(_) => vec![],
@@ -81,5 +85,6 @@ pub async fn species_photo(taxon_id: u64) -> Option<Photo> {
     Some(Photo {
         url: p.medium_url,
         attribution: p.attribution,
+        link: format!("https://www.inaturalist.org/taxa/{taxon_id}"),
     })
 }

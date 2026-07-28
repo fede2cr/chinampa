@@ -216,6 +216,7 @@ fn main() -> Result<()> {
                 for_sale,
                 price,
                 count,
+                book_references: vec![],
             };
             let tag = write_new(dir, meta)?;
             println!("{}", tag.url(&base_url));
@@ -238,6 +239,7 @@ fn main() -> Result<()> {
                 for_sale: false,
                 price: None,
                 count: None,
+                book_references: vec![],
             };
             let tag = write_new(dir, meta)?;
             println!("{}", tag.url(&base_url));
