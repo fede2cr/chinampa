@@ -41,11 +41,27 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
 }
 
 .app-header h1 {
   font-size: 1.4rem;
   margin: 0;
+}
+
+.screen-title {
+  font-size: 1.2rem;
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+  flex: none;
 }
 
 .settings {
@@ -57,65 +73,17 @@ body {
   padding: 12px;
 }
 
-.panel {
-  background: var(--surface);
-  border-radius: 12px;
-  padding: 8px 12px;
-}
-
-.panel > summary {
-  cursor: pointer;
-  font-weight: 600;
-  padding: 4px 0;
-  color: var(--accent);
-  list-style: none;
-}
-
-.panel > summary::-webkit-details-marker {
-  display: none;
-}
-
-.panel[open] > summary {
-  margin-bottom: 8px;
-}
-
-.panel .settings {
-  padding: 0;
-}
-
-.panel > button {
-  margin-top: 10px;
-  width: 100%;
-}
-
 .hidden {
   display: none;
 }
 
-.editor {
-  background: var(--surface);
-  border-radius: 12px;
-  padding: 12px;
+.screen {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 }
 
-.editor-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.editor-head h2 {
-  margin: 0;
-  font-size: 1.1rem;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.editor textarea {
+.settings textarea {
   background: var(--surface-2);
   border: 1px solid transparent;
   border-radius: 8px;
@@ -126,7 +94,7 @@ body {
   resize: vertical;
 }
 
-.editor textarea:focus {
+.settings textarea:focus {
   outline: none;
   border-color: var(--accent);
 }
@@ -228,21 +196,23 @@ button.ghost {
   gap: 8px;
 }
 
-.tag {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  background: var(--surface);
-  border-radius: 12px;
-  padding: 12px 14px;
-}
-
-.tag-info {
+/* Each tag in the list is a full-width button that opens its detail screen. */
+.tag-button {
+  width: 100%;
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 2px;
-  min-width: 0;
+  text-align: left;
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-weight: 400;
+}
+
+.tag-button:active {
+  background: var(--surface-2);
 }
 
 .tag-id {
@@ -254,17 +224,91 @@ button.ghost {
 .tag-sub {
   font-size: 0.85rem;
   color: var(--muted);
+  max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.tag-actions {
-  display: flex;
-  gap: 8px;
-  flex: none;
+/* Detail screen: definition list of the tag's fields. */
+.detail {
+  margin: 0;
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 12px;
 }
 
-.tag .write {
-  flex: none;
+.detail dt {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.detail dd {
+  margin: 0;
+  word-break: break-word;
+}
+
+.detail-body-text {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.82rem;
+  color: var(--text);
+}
+
+/* Stacked action buttons (detail + config screens). */
+.stack-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.stack-actions > button {
+  flex: 1;
+}
+
+/* Full-screen overlay used while writing NFC tags in a batch. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 10;
+}
+
+.overlay-card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: center;
+}
+
+.overlay-card h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.overlay-url {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.8rem;
+  color: var(--muted);
+  word-break: break-all;
+}
+
+.write-counter {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--accent);
 }
