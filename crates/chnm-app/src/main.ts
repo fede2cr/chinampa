@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { isAvailable, write, uriRecord } from "@tauri-apps/plugin-nfc";
+import { isAvailable, scan, write, uriRecord } from "@tauri-apps/plugin-nfc";
 import { load, type Store } from "@tauri-apps/plugin-store";
 
 /** Repository + display settings sent to the Rust commands. */
@@ -290,16 +290,17 @@ function parseReferences(value: string): BookReference[] {
 // ---------------------------------------------------------------------------
 // NFC writing
 //
-// Android only routes a scanned tag to this app while a scan/write session is
-// active (foreground dispatch). If no session is live when a tag is tapped, the
-// OS hands it to the default tag handler — which is why another app can pop up
-// instead. The batch loop below keeps a `write()` session alive continuously so
-// tag after tag can be written until the user presses Done.
+// Android only routes a tapped tag to this app while a reader session is active
+// (foreground dispatch). Blank tags fire ACTION_TAG_DISCOVERED (not
+// ACTION_NDEF_DISCOVERED), so we `scan({ type: "tag" })` to register the
+// catch-all TAG filter and grab the tag before the OS hands it to the stock
+// tag viewer; then we `write()` the URL to the just-scanned tag. Looping
+// scan→write lets us write tag after tag, counting each, until Done.
 // ---------------------------------------------------------------------------
 
 let batchWriting = false;
 let batchCount = 0;
-// Resolver that lets the Done button interrupt the pending `write()` wait.
+// Resolver that lets the Done button interrupt the pending `scan()` wait.
 let cancelBatch: (() => void) | null = null;
 
 function updateWriteCount(): void {
@@ -307,7 +308,7 @@ function updateWriteCount(): void {
 }
 
 /**
- * Open the write overlay and keep writing the same URL to any tag presented,
+ * Open the write overlay and keep writing the same URL to each tag presented,
  * counting successes, until the user presses Done.
  */
 async function startBatchWrite(url: string): Promise<void> {
@@ -339,25 +340,28 @@ async function startBatchWrite(url: string): Promise<void> {
   batchWriting = true;
   setStatus("Hold a blank NFC tag against the phone…", "info", "write");
 
+  const records = [uriRecord(url)];
   while (batchWriting) {
     const cancelled = new Promise<"cancel">((resolve) => {
       cancelBatch = () => resolve("cancel");
     });
-    const started = Date.now();
-    const writePromise = write([uriRecord(url)], {
-      kind: { type: "ndef" },
-      message: "Hold a blank NFC tag near the phone",
-      successMessage: "Tag written",
-    });
-    // If the user cancels mid-wait we stop awaiting this promise; swallow any
-    // later rejection so it doesn't surface as an unhandled rejection.
-    writePromise.catch(() => {});
     try {
+      // Wait for a tag to be presented. `keepSessionAlive` holds the connection
+      // open so the following write() targets this same tag. The TAG filter is
+      // the catch-all that intercepts blank tags (which fire TECH/TAG, not
+      // NDEF) before Android routes them to the default tag viewer.
+      const scanPromise = scan(
+        { type: "tag" },
+        { keepSessionAlive: true },
+      );
+      scanPromise.catch(() => {});
       const outcome = await Promise.race([
-        writePromise.then(() => "ok" as const),
+        scanPromise.then(() => "ok" as const),
         cancelled,
       ]);
       if (outcome === "cancel") break;
+      // A tag is now connected — write the URL onto it.
+      await write(records, { kind: { type: "tag" } });
       batchCount += 1;
       updateWriteCount();
       console.info(`[nfc] wrote tag #${batchCount}`);
@@ -367,16 +371,8 @@ async function startBatchWrite(url: string): Promise<void> {
         "write",
       );
     } catch (err) {
-      console.error("[nfc] write() failed:", err);
+      console.error("[nfc] scan/write failed:", err);
       if (!batchWriting) break;
-      // A near-instant rejection is a hard failure (NFC disabled, permission,
-      // unsupported tag) rather than "no tag was tapped" — stop to avoid a tight
-      // retry loop and let the user read the error.
-      if (Date.now() - started < 750) {
-        setStatus(`Write failed: ${String(err)}`, "error", "write");
-        batchWriting = false;
-        break;
-      }
       setStatus(
         `That tag failed: ${String(err)}. Try another tag, or press Done.`,
         "error",
@@ -388,7 +384,7 @@ async function startBatchWrite(url: string): Promise<void> {
   }
 }
 
-/** Close the write overlay and interrupt any pending write wait. */
+/** Close the write overlay and interrupt any pending scan wait. */
 function stopBatchWrite(): void {
   batchWriting = false;
   if (cancelBatch) cancelBatch();
