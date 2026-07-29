@@ -135,7 +135,7 @@ jobs:
           echo "APK_OUT=$RUNNER_TEMP/chnm-android-signed.apk" >> "$GITHUB_ENV"
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: chnm-android-apk
           path: ${{ env.APK_OUT }}
