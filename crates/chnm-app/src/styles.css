@@ -77,6 +77,41 @@ body {
   display: none !important;
 }
 
+/* Collapsible section (collapsed by default until the summary is tapped). */
+.collapsible {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 4px 12px;
+}
+
+.collapsible > summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 8px 0;
+  color: var(--accent);
+  list-style: none;
+}
+
+.collapsible > summary::-webkit-details-marker {
+  display: none;
+}
+
+.collapsible > summary::before {
+  content: "\25B8\00a0";
+}
+
+.collapsible[open] > summary::before {
+  content: "\25BE\00a0";
+}
+
+.collapsible[open] > summary {
+  margin-bottom: 8px;
+}
+
+.collapsible .tags {
+  padding-bottom: 8px;
+}
+
 .screen {
   display: flex;
   flex-direction: column;

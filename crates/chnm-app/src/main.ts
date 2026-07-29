@@ -627,7 +627,16 @@ function renderTags(tags: TagSummary[]): void {
     setStatus("No tags found in the repository.", "info", "list");
     return;
   }
-  for (const tag of tags) {
+  // Sort by species name (case-insensitive); tags without one sort last.
+  const sorted = [...tags].sort((a, b) => {
+    const an = a.speciesName ?? "";
+    const bn = b.speciesName ?? "";
+    if (an === bn) return a.id.localeCompare(b.id);
+    if (an === "") return 1;
+    if (bn === "") return -1;
+    return an.localeCompare(bn, undefined, { sensitivity: "base" });
+  });
+  for (const tag of sorted) {
     const li = document.createElement("li");
 
     // The whole row is a button that opens the tag's detail screen.
@@ -637,11 +646,11 @@ function renderTags(tags: TagSummary[]): void {
 
     const title = document.createElement("span");
     title.className = "tag-id";
-    title.textContent = tag.id;
+    title.textContent = tag.speciesName ?? tag.id;
 
     const sub = document.createElement("span");
     sub.className = "tag-sub";
-    sub.textContent = tag.speciesName ?? tag.description ?? tag.url;
+    sub.textContent = tag.description ?? "";
 
     btn.append(title, sub);
     btn.addEventListener("click", () => void openDetail(tag));
