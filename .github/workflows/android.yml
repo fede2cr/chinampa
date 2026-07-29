@@ -96,7 +96,7 @@ jobs:
         run: cargo tauri android init
 
       - name: Build APK
-        run: cargo tauri android build --apk
+        run: cargo tauri android build --apk true
 
       - name: Sign APK if a keystore is configured
         env:
