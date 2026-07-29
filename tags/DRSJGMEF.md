@@ -17,4 +17,4 @@ Plantula Cafeto, variedad F1 Milenio
 
 ## Log
 
-- 2026-07-DD — Comprado en Catie
+- 2026-07-29 — Comprado en Catie

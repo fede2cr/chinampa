@@ -17,5 +17,5 @@ Plantula Cafeto, variedad F1 Centroamericano
 
 # Log
 
-- 2026-07-DD — Comprado en Catie
+- 2026-07-29 — Comprado en Catie
 
