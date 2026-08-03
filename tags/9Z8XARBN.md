@@ -9,6 +9,9 @@ collection: Cafetos F1
 for_sale: false
 price: null
 count: 10
+book_references:
+- book: "Catálogo variedades de Café Catie (2025)"
+  page: 4
 ---
 
 ## Description
