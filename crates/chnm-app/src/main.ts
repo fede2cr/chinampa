@@ -40,6 +40,13 @@ interface ObservationSpecies {
   speciesName: string;
 }
 
+/** A displayable iNaturalist photo (mirrors the Rust `Photo`). */
+interface Photo {
+  url: string;
+  attribution: string;
+  link: string;
+}
+
 /** Repository + display config read from the repo's `chnm.toml`. */
 interface RemoteConfig {
   domain: string | null;
@@ -490,6 +497,7 @@ async function openDetail(tag: TagSummary): Promise<void> {
   currentDetail = null;
   $("detail-id").textContent = tag.id;
   $("detail-body").replaceChildren();
+  clearPhotos();
   showScreen("detail");
   setStatus(`Loading ${tag.id}…`, "info", "detail");
   try {
@@ -497,6 +505,7 @@ async function openDetail(tag: TagSummary): Promise<void> {
     currentDetail = detail;
     renderDetail(detail);
     setStatus("", "info", "detail");
+    void loadPhotos(detail);
   } catch (err) {
     // Fall back to the list summary so Write to NFC still works offline; only
     // editing is unavailable without the full detail (and its sha).
@@ -506,6 +515,66 @@ async function openDetail(tag: TagSummary): Promise<void> {
     addDetailRow(dl, "Collection", tag.collection);
     addDetailRow(dl, "URL", tag.url);
     setStatus(`Couldn't load full details: ${String(err)}`, "error", "detail");
+  }
+}
+
+/** Empty the gallery and hide the iNaturalist link (when switching tags). */
+function clearPhotos(): void {
+  $("detail-gallery").replaceChildren();
+  $("detail-inat-wrap").classList.add("hidden");
+}
+
+/** The tag's iNaturalist page: its observation when it has one, else its species. */
+function inatLink(detail: TagDetail): string | null {
+  if (detail.observationInatId !== null)
+    return `https://www.inaturalist.org/observations/${detail.observationInatId}`;
+  if (detail.speciesInatId !== null)
+    return `https://www.inaturalist.org/taxa/${detail.speciesInatId}`;
+  return null;
+}
+
+/**
+ * Show a tag's iNaturalist photos: the observation's photos when it has one,
+ * otherwise the species' default photo. The link to the observation/species
+ * page is shown regardless, so there is still somewhere to go when no photo
+ * resolves (offline, or a record without images).
+ */
+async function loadPhotos(detail: TagDetail): Promise<void> {
+  const link = inatLink(detail);
+  if (!link) return;
+  $<HTMLAnchorElement>("detail-inat").href = link;
+  $("detail-inat-wrap").classList.remove("hidden");
+
+  let photos: Photo[];
+  try {
+    photos = await invoke<Photo[]>("tag_photos", {
+      observationInatId: detail.observationInatId,
+      speciesInatId: detail.speciesInatId,
+    });
+  } catch (err) {
+    console.error("[inat] photo lookup failed:", err);
+    return;
+  }
+  // The user may have opened another tag while the request was in flight.
+  if (currentDetail?.id !== detail.id) return;
+
+  const gallery = $("detail-gallery");
+  gallery.replaceChildren();
+  for (const photo of photos) {
+    const figure = document.createElement("figure");
+    const anchor = document.createElement("a");
+    anchor.href = photo.link;
+    anchor.target = "_blank";
+    anchor.rel = "noopener noreferrer";
+    const img = document.createElement("img");
+    img.src = photo.url;
+    img.alt = detail.speciesName ?? "iNaturalist photo";
+    img.loading = "lazy";
+    anchor.append(img);
+    const caption = document.createElement("figcaption");
+    caption.textContent = photo.attribution;
+    figure.append(anchor, caption);
+    gallery.append(figure);
   }
 }
 

@@ -298,6 +298,39 @@ button.ghost {
   color: var(--text);
 }
 
+/* iNaturalist photos for the open tag. */
+.gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gallery:empty {
+  display: none;
+}
+
+.gallery figure {
+  margin: 0;
+}
+
+.gallery img {
+  display: block;
+  width: 100%;
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.gallery figcaption {
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.inat-link {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
 /* Stacked action buttons (detail + config screens). */
 .stack-actions {
   display: flex;

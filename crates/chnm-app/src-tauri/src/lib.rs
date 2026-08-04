@@ -387,6 +387,111 @@ async fn fetch_observation_species(
     Ok((taxon.id, taxon.name))
 }
 
+/// A displayable iNaturalist photo (mirrors the web front-end's gallery).
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Photo {
+    /// A medium-sized image URL suitable for display.
+    pub url: String,
+    /// Attribution string required by iNaturalist's terms.
+    pub attribution: String,
+    /// Link to the iNaturalist page this photo came from (observation or taxon).
+    pub link: String,
+}
+
+#[derive(Deserialize)]
+struct InatResults<T> {
+    results: Vec<T>,
+}
+
+#[derive(Deserialize)]
+struct InatObsPhotos {
+    #[serde(default)]
+    photos: Vec<InatObsPhoto>,
+}
+
+#[derive(Deserialize)]
+struct InatObsPhoto {
+    url: String,
+    #[serde(default)]
+    attribution: String,
+}
+
+#[derive(Deserialize)]
+struct InatTaxonPhotos {
+    default_photo: Option<InatTaxonPhoto>,
+}
+
+#[derive(Deserialize)]
+struct InatTaxonPhoto {
+    medium_url: String,
+    #[serde(default)]
+    attribution: String,
+}
+
+/// iNaturalist returns square thumbnails by default; swap the size token so we
+/// display a larger image.
+fn to_medium(url: &str) -> String {
+    url.replace("/square.", "/medium.")
+}
+
+/// Fetch all photos for an observation. Returns an empty list on any error.
+async fn observation_photos(client: &reqwest::Client, id: u64) -> Vec<Photo> {
+    let url = format!("https://api.inaturalist.org/v1/observations/{id}");
+    let link = format!("https://www.inaturalist.org/observations/{id}");
+    let Ok(resp) = client.get(&url).send().await else {
+        return Vec::new();
+    };
+    match resp.json::<InatResults<InatObsPhotos>>().await {
+        Ok(w) => w
+            .results
+            .into_iter()
+            .flat_map(|r| r.photos)
+            .map(|p| Photo {
+                url: to_medium(&p.url),
+                attribution: p.attribution,
+                link: link.clone(),
+            })
+            .collect(),
+        Err(_) => Vec::new(),
+    }
+}
+
+/// Fall back to the species' default photo. Returns `None` on any error.
+async fn species_photo(client: &reqwest::Client, taxon_id: u64) -> Option<Photo> {
+    let url = format!("https://api.inaturalist.org/v1/taxa/{taxon_id}");
+    let resp = client.get(&url).send().await.ok()?;
+    let w = resp.json::<InatResults<InatTaxonPhotos>>().await.ok()?;
+    let p = w.results.into_iter().next()?.default_photo?;
+    Some(Photo {
+        url: p.medium_url,
+        attribution: p.attribution,
+        link: format!("https://www.inaturalist.org/taxa/{taxon_id}"),
+    })
+}
+
+/// Resolve a tag's photos: observation photos first, species photo as the
+/// fallback. Errors degrade to an empty list so the detail screen still shows.
+#[tauri::command]
+async fn tag_photos(
+    observation_inat_id: Option<u64>,
+    species_inat_id: Option<u64>,
+) -> Result<Vec<Photo>, String> {
+    let client = build_client()?;
+    if let Some(obs) = observation_inat_id {
+        let photos = observation_photos(&client, obs).await;
+        if !photos.is_empty() {
+            return Ok(photos);
+        }
+    }
+    if let Some(taxon) = species_inat_id {
+        if let Some(p) = species_photo(&client, taxon).await {
+            return Ok(vec![p]);
+        }
+    }
+    Ok(Vec::new())
+}
+
 /// List every tag in the repository's `tags/` directory via the GitHub API.
 #[tauri::command]
 async fn list_tags(settings: RepoSettings) -> Result<Vec<TagSummary>, String> {
@@ -681,6 +786,7 @@ pub fn run() {
             clone_tag,
             update_tag,
             resolve_observation,
+            tag_photos,
             fetch_config,
             tag_url
         ])
