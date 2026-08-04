@@ -1,7 +1,7 @@
 ---
 id: VBPCMPVF
 linked_tags: []
-description: Orchídea, no-id: Prob Warczewiczella discolor
+description: Orchídea, no-id, Prob Warczewiczella discolor
 species_inat_id: 705782
 species_name: Warczewiczella discolor
 observation_inat_id: 388221911
