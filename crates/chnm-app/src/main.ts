@@ -308,6 +308,30 @@ function updateWriteCount(): void {
 }
 
 /**
+ * Turn an unknown thrown value into human-readable text. Tauri plugin errors
+ * arrive as plain objects, so `String(err)` yields the useless "[object
+ * Object]"; here we dig out a message string (or fall back to JSON).
+ */
+function describeError(err: unknown): string {
+  if (typeof err === "string") return err;
+  if (err instanceof Error && err.message) return err.message;
+  if (err && typeof err === "object") {
+    const rec = err as Record<string, unknown>;
+    for (const key of ["message", "error", "reason", "description"]) {
+      const value = rec[key];
+      if (typeof value === "string" && value) return value;
+    }
+    try {
+      const json = JSON.stringify(err);
+      if (json && json !== "{}") return json;
+    } catch {
+      /* non-serialisable — fall through */
+    }
+  }
+  return "unknown error";
+}
+
+/**
  * Open the write overlay and keep writing the same URL to each tag presented,
  * counting successes, until the user presses Done.
  */
@@ -324,7 +348,7 @@ async function startBatchWrite(url: string): Promise<void> {
     available = await isAvailable();
   } catch (err) {
     console.error("[nfc] isAvailable() threw:", err);
-    setStatus(`NFC check failed: ${String(err)}`, "error", "write");
+    setStatus(`NFC check failed: ${describeError(err)}`, "error", "write");
     return;
   }
   console.info("[nfc] isAvailable() =>", available);
@@ -373,8 +397,11 @@ async function startBatchWrite(url: string): Promise<void> {
     } catch (err) {
       console.error("[nfc] scan/write failed:", err);
       if (!batchWriting) break;
+      // NFC hiccups are routine (tag moved too soon, poor contact). Lead with a
+      // plain-language retry hint; the same tag usually works on a second try.
+      // Keep the technical detail in parentheses for troubleshooting.
       setStatus(
-        `That tag failed: ${String(err)}. Try another tag, or press Done.`,
+        `Couldn't write that tag — hold it flat against the phone and try again, or press Done. (${describeError(err)})`,
         "error",
         "write",
       );

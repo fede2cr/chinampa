@@ -31,7 +31,10 @@ body {
 #app {
   max-width: 640px;
   margin: 0 auto;
-  padding: 16px;
+  /* Add the device safe-area insets so headers/buttons clear the Android
+     status bar (top) and gesture/navigation bar (bottom). */
+  padding: calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right))
+    calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -312,7 +315,9 @@ button.ghost {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  /* Keep the card clear of the status/navigation bars on Android. */
+  padding: calc(24px + env(safe-area-inset-top)) calc(24px + env(safe-area-inset-right))
+    calc(24px + env(safe-area-inset-bottom)) calc(24px + env(safe-area-inset-left));
   background: rgba(0, 0, 0, 0.7);
   z-index: 10;
 }
